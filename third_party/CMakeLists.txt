@@ -29,8 +29,12 @@ target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
 
 add_library(sdl2 INTERFACE)
-set(sdl2_DIR "SDL_PATH" CACHE PATH "Path to SDL2")
-
+#set(sdl2_DIR "SDL_PATH" CACHE PATH "Path to SDL2")
+#使用前先下载SDL库 把路径设置到环境变量，比如路径为 D:\Program Files\SDL2-2.0.20
+#如果提示缺少SDL.dll就把 SDL2复制一个丢到生成的exe路径
+set(sdl2_DIR $ENV{SDL_PATH})
+MESSAGE(STATUS  "Using SDL_PATH from environment path:")
+MESSAGE(STATUS  $ENV{SDL_PATH})
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
 target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
