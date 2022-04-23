@@ -124,9 +124,7 @@ void VulkanEngine::draw() {
 		rpInfo.pClearValues = &clearValue;
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		{
-			vkCmdBeginRenderPass(cmd,&rpInfo,VK_SUBPASS_CONTENTS_INLINE);
-
-			//once we start adding rendering commands ,they will be go here
+			//once we start adding rendering commands ,they will be  here
 			vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_trianglePipeline);
 			vkCmdDraw(cmd,3,1,0,0);
 		}
