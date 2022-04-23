@@ -7,6 +7,21 @@
 #include <vk_types.h>
 #include <vk_initializers.h>
 
+//bootstrap library
+#include "VkBootstrap.h"
+
+#include "iostream"
+//we want to abort when there is an error,
+using namespace std;
+#define VK_CHECK(x)											\
+do{															\
+	VkResult err=x;											\
+	if(errc){												\
+		std::cout<<"Detect Vulkan error:"<<err<<std::endl;	\
+		abort();											\
+	}														\
+}while(0)
+
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -22,7 +37,11 @@ void VulkanEngine::init()
 		_windowExtent.height,
 		window_flags
 	);
-	
+
+	//load the core vulkan structures
+	init_vulkan();
+	init_swapchain();
+
 	//everything went fine
 	_isInitialized = true;
 }
@@ -30,6 +49,19 @@ void VulkanEngine::cleanup()
 {	
 	if (_isInitialized) {
 		
+		SDL_DestroyWindow(_window);
+
+		vkDestroySwapchainKHR(_device,_swapchain, nullptr);
+
+		//destroy swapchain resources ,no need to destroy the images because the images are own and destroyed with the swapchain
+		for(auto & _swapchainImageView : _swapchainImageViews){
+			vkDestroyImageView(_device,_swapchainImageView, nullptr);
+		}
+
+		vkDestroySurfaceKHR(_instance,_surface, nullptr);
+		vkb::destroy_debug_utils_messenger(_instance,_debug_messenger);
+		vkDestroyDevice(_device, nullptr);
+		vkDestroyInstance(_instance, nullptr);
 		SDL_DestroyWindow(_window);
 	}
 }
@@ -56,5 +88,60 @@ void VulkanEngine::run()
 
 		draw();
 	}
+}
+
+void VulkanEngine::init_vulkan() {
+	vkb::InstanceBuilder builder;
+
+	//make the vulkan instance , with basic debug features
+	auto inst_ret = builder.set_app_name("Release the Vulkan!!!")
+			.request_validation_layers(true)
+			.require_api_version(1,1,0)
+			.use_default_debug_messenger()
+			.build();
+
+	vkb::Instance vkb_inst = inst_ret.value();
+
+	//store the instance
+	_instance=vkb_inst.instance;
+	_debug_messenger=vkb_inst.debug_messenger;
+
+	//get the surface of the window we opened with SDL
+	SDL_Vulkan_CreateSurface(_window,_instance,&_surface);
+
+	//use vkBootstrap to select a GPU
+	//we want a GPU that can write to the SDL surface and supports Vulkan 1.1
+	vkb::PhysicalDeviceSelector deviceSelector{vkb_inst};
+	vkb::PhysicalDevice physicalDevice =deviceSelector
+			.set_minimum_version(1,1)
+			.set_surface(_surface)
+			.select()
+			.value();
+
+	//create the final Vulkan device
+	vkb::DeviceBuilder deviceBuilder { physicalDevice};
+	vkb::Device vkbDevice = deviceBuilder.build().value();
+
+	//get the VkDevice handle used in the rest of Vulkan application
+	_device=vkbDevice.device;
+	_chosenGPU=physicalDevice.physical_device;
+
+}
+
+void VulkanEngine::init_swapchain() {
+	vkb::SwapchainBuilder swapchainBuilder{_chosenGPU,_device,_surface};
+	vkb::Swapchain vkbSwapchain =swapchainBuilder
+			.use_default_format_selection()
+			//use vsync present mode
+			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+			.set_desired_extent(_windowExtent.width,_windowExtent.height)
+			.build()
+			.value();
+
+	_swapchain=vkbSwapchain.swapchain;
+	_swapchainImages=vkbSwapchain.get_images().value();
+	_swapchainImageViews=vkbSwapchain.get_image_views().value();
+
+	_swapchainImageFormat=vkbSwapchain.image_format;
 }
 
