@@ -29,8 +29,8 @@ target_sources(tinyobjloader PRIVATE
 target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
 add_library(sdl2 INTERFACE)
-set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
-
+#set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
+set(sdl2_DIR $ENV{SDL_PATH})
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
 target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
