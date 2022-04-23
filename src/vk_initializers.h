@@ -22,5 +22,14 @@ namespace vkinit {
 	VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+
+	VkPresentInfoKHR present_info();
+
+	VkRenderPassBeginInfo
+	renderpass_begin_info(VkRenderPass renderPass, VkExtent2D windowExtent, VkFramebuffer framebuffer);
+
+	VkSubmitInfo submit_info(VkCommandBuffer *cmd);
+
+	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
 }
 

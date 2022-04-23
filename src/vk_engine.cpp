@@ -58,6 +58,13 @@ void VulkanEngine::cleanup() {
 	if (_isInitialized) {
 
 		SDL_DestroyWindow(_window);
+		vkDeviceWaitIdle(_device);
+
+		//destroy sync objects
+		vkDestroyFence(_device, _renderFence, nullptr);
+		vkDestroySemaphore(_device, _renderSemaphore, nullptr);
+		vkDestroySemaphore(_device, _presentSemaphore, nullptr);
+
 
 		vkDestroyCommandPool(_device, _commandPool, nullptr);
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
@@ -68,6 +75,8 @@ void VulkanEngine::cleanup() {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
+		vkDestroyPipeline(_device,_trianglePipeline, nullptr);
+		vkDestroyPipelineLayout(_device,_trianglePipelineLayout, nullptr);
 
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
@@ -94,30 +103,18 @@ void VulkanEngine::draw() {
 	VkCommandBuffer cmd = _mainCommandBuffer;
 
 	//begin the command buffer recording. we will use this command buffer exactly once
-	VkCommandBufferBeginInfo cmdBeginInfo{};
-	cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	cmdBeginInfo.pNext = nullptr;
+	VkCommandBufferBeginInfo cmdBeginInfo=vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	cmdBeginInfo.pInheritanceInfo = nullptr;
-	cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 	{
 		//make a clear-color from frame number, This will flash with 1 120*pi frame period
 		VkClearValue clearValue;
-		float flash = abs(_frameNumber / 120.0f);
+		float flash = abs(sin(_frameNumber / 120.0f));
 		clearValue.color = {{0.0f, 0.0f, flash, 1.0f}};
 
 		//start the main renderpass
 		//we will use the clear color from above, and the framebuffer of the index the swapchain gave us
-		VkRenderPassBeginInfo rpInfo = {};
-		rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		rpInfo.pNext = nullptr;
-
-		rpInfo.renderPass = _renderPass;
-		rpInfo.renderArea.offset.x = 0;
-		rpInfo.renderArea.offset.y = 0;
-		rpInfo.renderArea.extent = _windowExtent;
-		rpInfo.framebuffer = _framebuffers[swapchainIndex];
+		VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass,_windowExtent,_framebuffers[swapchainIndex]);
 
 		//connect clear values
 		rpInfo.clearValueCount = 1;
@@ -135,9 +132,7 @@ void VulkanEngine::draw() {
 	//prepare the submission to the queue
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
 	//we will signal the _renderSemaphore, to signal that rendering has finished
-	VkSubmitInfo submit = {};
-	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit.pNext = nullptr;
+	VkSubmitInfo submit = vkinit::submit_info(&cmd);
 
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	submit.pWaitDstStageMask = &waitStage;
@@ -147,9 +142,6 @@ void VulkanEngine::draw() {
 	submit.signalSemaphoreCount = 1;
 	submit.pSignalSemaphores = &_renderSemaphore;
 
-	submit.commandBufferCount = 1;
-	submit.pCommandBuffers = &cmd;
-
 	//submit  command buffer to the queue and execute it.
 	//_renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
@@ -158,9 +150,7 @@ void VulkanEngine::draw() {
 	//this will put the image we just rendered into the visible window.
 	//we want to wait on the _renderSemaphore for that
 	//as it's necessary that  drawing commands have finished before the image is displayed to the user
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.pNext = nullptr;
+	VkPresentInfoKHR presentInfo = vkinit::present_info();
 
 	presentInfo.pSwapchains = &_swapchain;
 	presentInfo.swapchainCount=1;
@@ -464,5 +454,7 @@ void VulkanEngine::init_pipelines() {
 
 	//finally, build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	vkDestroyShaderModule(_device,triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device,triangleVertexShader, nullptr);
 
 }

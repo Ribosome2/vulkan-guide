@@ -23,6 +23,17 @@ vkinit::command_buffer_allocate_info(VkCommandPool pool, uint32_t count, VkComma
 	return info;
 }
 
+VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags /*= 0*/)
+{
+	VkCommandBufferBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.pNext = nullptr;
+
+	info.pInheritanceInfo = nullptr;
+	info.flags = flags;
+	return info;
+}
+
 VkPipelineShaderStageCreateInfo
 vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule) {
 	VkPipelineShaderStageCreateInfo info{};
@@ -121,4 +132,53 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 	return info;
 }
 
+VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd)
+{
+	VkSubmitInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	info.pNext = nullptr;
+
+	info.waitSemaphoreCount = 0;
+	info.pWaitSemaphores = nullptr;
+	info.pWaitDstStageMask = nullptr;
+	info.commandBufferCount = 1;
+	info.pCommandBuffers = cmd;
+	info.signalSemaphoreCount = 0;
+	info.pSignalSemaphores = nullptr;
+
+	return info;
+}
+
+
+VkPresentInfoKHR vkinit::present_info()
+{
+	VkPresentInfoKHR info = {};
+	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	info.pNext = nullptr;
+
+	info.swapchainCount = 0;
+	info.pSwapchains = nullptr;
+	info.pWaitSemaphores = nullptr;
+	info.waitSemaphoreCount = 0;
+	info.pImageIndices = nullptr;
+
+	return info;
+}
+
+VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkExtent2D windowExtent, VkFramebuffer framebuffer)
+{
+	VkRenderPassBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	info.pNext = nullptr;
+
+	info.renderPass = renderPass;
+	info.renderArea.offset.x = 0;
+	info.renderArea.offset.y = 0;
+	info.renderArea.extent = windowExtent;
+	info.clearValueCount = 1;
+	info.pClearValues = nullptr;
+	info.framebuffer = framebuffer;
+
+	return info;
+}
 
