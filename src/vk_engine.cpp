@@ -16,7 +16,7 @@ using namespace std;
 #define VK_CHECK(x)											\
 do{															\
 	VkResult err=x;											\
-	if(errc){												\
+	if(err){												\
 		std::cout<<"Detect Vulkan error:"<<err<<std::endl;	\
 		abort();											\
 	}														\
@@ -41,6 +41,7 @@ void VulkanEngine::init()
 	//load the core vulkan structures
 	init_vulkan();
 	init_swapchain();
+	init_commands();
 
 	//everything went fine
 	_isInitialized = true;
@@ -51,6 +52,7 @@ void VulkanEngine::cleanup()
 		
 		SDL_DestroyWindow(_window);
 
+		vkDestroyCommandPool(_device,_commandPool, nullptr);
 		vkDestroySwapchainKHR(_device,_swapchain, nullptr);
 
 		//destroy swapchain resources ,no need to destroy the images because the images are own and destroyed with the swapchain
@@ -126,6 +128,10 @@ void VulkanEngine::init_vulkan() {
 	_device=vkbDevice.device;
 	_chosenGPU=physicalDevice.physical_device;
 
+	//use vkBootstrap strap to ge t a graphics queue
+	_graphicsQueue=vkbDevice.get_queue(vkb::QueueType::graphics).value();
+	_graphicsQueueFamily= vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
 }
 
 void VulkanEngine::init_swapchain() {
@@ -143,5 +149,16 @@ void VulkanEngine::init_swapchain() {
 	_swapchainImageViews=vkbSwapchain.get_image_views().value();
 
 	_swapchainImageFormat=vkbSwapchain.image_format;
+}
+
+void VulkanEngine::init_commands() {
+	//create  a command pool for commands submitted to  the graphics queue.
+	//we also want the pool to allow  for resetting  of individual command buffers
+	VkCommandPoolCreateInfo commandPoolInfo =vkinit::command_pool_create_info(_graphicsQueueFamily,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	VK_CHECK(vkCreateCommandPool(_device,&commandPoolInfo, nullptr,&_commandPool));
+
+	//allocate the default command buffer that we will use for rendering
+	VkCommandBufferAllocateInfo  cmdAllocInfo = vkinit::command_buffer_allocate_info(_commandPool,1);
+	VK_CHECK(vkAllocateCommandBuffers(_device,&cmdAllocInfo,&_mainCommandBuffer));
 }
 

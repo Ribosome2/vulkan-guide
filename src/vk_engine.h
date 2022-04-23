@@ -31,6 +31,7 @@ public:
 private:
 	void init_vulkan();
 	void init_swapchain();
+	void init_commands();
 private:
 	//--- omitted ---
 	VkInstance _instance;
@@ -45,6 +46,12 @@ private:
 	VkFormat _swapchainImageFormat;
 	std::vector<VkImage >	_swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
+
+	//for commands
+	VkQueue _graphicsQueue; //queue we will submit to
+	uint32_t _graphicsQueueFamily; //family of that queue
+	VkCommandPool _commandPool;//that command pool for out commands
+	VkCommandBuffer _mainCommandBuffer; //the buffer we will record into
 
 
 };
