@@ -166,6 +166,7 @@ void VulkanEngine::draw() {
 	presentInfo.swapchainCount=1;
 
 	presentInfo.pWaitSemaphores=&_renderSemaphore;
+	presentInfo.waitSemaphoreCount=1;
 	presentInfo.pImageIndices=&swapchainIndex;
 	VK_CHECK(vkQueuePresentKHR(_graphicsQueue,&presentInfo));
 
