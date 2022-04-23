@@ -34,6 +34,7 @@ private:
 	void init_commands();
 	void init_default_renderpass();
 	void init_frameBuffers();
+	void init_sync_structures();
 private:
 	//--- omitted ---
 	VkInstance _instance;
@@ -59,5 +60,8 @@ private:
 	VkRenderPass _renderPass;
 	std::vector<VkFramebuffer > _framebuffers;
 
+	//for render loop
+	VkSemaphore _presentSemaphore,_renderSemaphore;
+	VkFence _renderFence;
 
 };
