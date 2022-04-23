@@ -32,6 +32,8 @@ private:
 	void init_vulkan();
 	void init_swapchain();
 	void init_commands();
+	void init_default_renderpass();
+	void init_frameBuffers();
 private:
 	//--- omitted ---
 	VkInstance _instance;
@@ -52,6 +54,10 @@ private:
 	uint32_t _graphicsQueueFamily; //family of that queue
 	VkCommandPool _commandPool;//that command pool for out commands
 	VkCommandBuffer _mainCommandBuffer; //the buffer we will record into
+
+	//for RenderPass
+	VkRenderPass _renderPass;
+	std::vector<VkFramebuffer > _framebuffers;
 
 
 };
