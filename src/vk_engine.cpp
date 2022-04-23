@@ -379,9 +379,9 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 	return true;
 }
 
-static void compileShader(char * shaderPath , char * outputPath){
+static void compileShader(std::string  shaderPath , std::string  outputPath){
 	char command[1024];
-	sprintf_s(command,"glslc.exe %s -o %s",shaderPath,outputPath);
+	sprintf_s(command,"glslc.exe %s -o %s",shaderPath.c_str(),outputPath.c_str());
 	auto result = system(command);
 	if(result!=0)
 	{
@@ -389,11 +389,16 @@ static void compileShader(char * shaderPath , char * outputPath){
 	}
 }
 void VulkanEngine::init_pipelines() {
+	std::string vert_shader_src_path= "../shaders/colored_triangle.vert";
+	std::string frag_shader_src_path= "../shaders/colored_triangle.frag";
 
-	compileShader("../shaders/triangle.vert","../shaders/triangle.vert.spv");
-	compileShader("../shaders/triangle.frag","../shaders/triangle.frag.spv");
+	std::string frag_shader_spv_path= "../spv_files/colored_triangle.frag.spv";
+	std::string vert_shader_spv_path= "../spv_files/colored_triangle.vert.spv";
+
+//	compileShader(vert_shader_src_path,vert_shader_spv_path);
+//	compileShader(frag_shader_src_path,frag_shader_spv_path);
 	VkShaderModule triangleFragShader;
-	if (!load_shader_module("../shaders/triangle.frag.spv", &triangleFragShader))
+	if (!load_shader_module(frag_shader_spv_path.c_str(), &triangleFragShader))
 	{
 		std::cerr << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -402,7 +407,7 @@ void VulkanEngine::init_pipelines() {
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module("../shaders/triangle.vert.spv", &triangleVertexShader))
+	if (!load_shader_module(vert_shader_spv_path.c_str(), &triangleVertexShader))
 	{
 		std::cerr << "Error when building the triangle vertex shader module" << std::endl;
 	}
