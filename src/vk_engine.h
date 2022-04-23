@@ -38,6 +38,7 @@ private:
 	void init_pipelines();
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+
 private:
 	//--- omitted ---
 	VkInstance _instance;
@@ -66,5 +67,8 @@ private:
 	//for render loop
 	VkSemaphore _presentSemaphore,_renderSemaphore;
 	VkFence _renderFence;
+
+	VkPipelineLayout _trianglePipelineLayout;
+	VkPipeline _trianglePipeline;
 
 };

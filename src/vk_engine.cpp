@@ -12,6 +12,7 @@
 
 #include "iostream"
 #include <fstream>
+#include "PipelineBuilder.h"
 //we want to abort when there is an error,
 using namespace std;
 #define VK_CHECK(x)                                            \
@@ -123,7 +124,11 @@ void VulkanEngine::draw() {
 		rpInfo.pClearValues = &clearValue;
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		{
-			//todo
+			vkCmdBeginRenderPass(cmd,&rpInfo,VK_SUBPASS_CONTENTS_INLINE);
+
+			//once we start adding rendering commands ,they will be go here
+			vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_trianglePipeline);
+			vkCmdDraw(cmd,3,1,0,0);
 		}
 		vkCmdEndRenderPass(cmd);
 	}
@@ -387,7 +392,7 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 
 static void compileShader(char * shaderPath , char * outputPath){
 	char command[1024];
-	sprintf(command,"glslc.exe %s -o %s",shaderPath,outputPath);
+	sprintf_s(command,"glslc.exe %s -o %s",shaderPath,outputPath);
 	auto result = system(command);
 	if(result!=0)
 	{
@@ -415,4 +420,50 @@ void VulkanEngine::init_pipelines() {
 	else {
 		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
+
+	//build the pipeline layout that controls the inputs/outputs of the shader
+	//we are not using descriptor sets or other system yet, so no need to use anything other than empty default
+	VkPipelineLayoutCreateInfo pipeline_layout_info=vkinit::pipeline_layout_create_info();
+	VK_CHECK(vkCreatePipelineLayout(_device,&pipeline_layout_info, nullptr,&_trianglePipelineLayout));
+
+	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
+	PipelineBuilder pipelineBuilder;
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT,triangleVertexShader)
+			);
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,triangleFragShader)
+	);
+	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
+	pipelineBuilder._vertexInputInfo= vkinit::vertex_input_state_create_info();
+
+	//input assembly is the configuration for drawing triangle lists,strips,or individual points
+	//we are just going to draw triangle list
+	pipelineBuilder._inputAssembly=vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	//build viewport and scissor from the swapchain extents
+	pipelineBuilder._viewport.x = 0.0f;
+	pipelineBuilder._viewport.y = 0.0f;
+	pipelineBuilder._viewport.width = (float)_windowExtent.width;
+	pipelineBuilder._viewport.height = (float)_windowExtent.height;
+	pipelineBuilder._viewport.minDepth = 0.0f;
+	pipelineBuilder._viewport.maxDepth = 1.0f;
+
+	pipelineBuilder._scissor.offset = { 0, 0 };
+	pipelineBuilder._scissor.extent = _windowExtent;
+
+	//configure the rasterizer to draw filled triangles
+	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+
+	//we don't use multisampling, so just run the default one
+	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
+
+	//a single blend attachment with no blending and writing to RGBA
+	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
+
+	//use the triangle layout we created
+	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
+
+	//finally, build the pipeline
+	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
 }
