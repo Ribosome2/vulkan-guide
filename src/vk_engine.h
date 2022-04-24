@@ -107,6 +107,8 @@ private:
 
 	VmaAllocator _allocator; //vma lib allocator
   	Mesh _triangleMesh;
+  	Mesh _monkeyMesh;
+
 
 	DeletionQueue _mainDeletionQueue;
 
