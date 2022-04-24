@@ -35,7 +35,7 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
 }
 
 VkPipelineShaderStageCreateInfo
-vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule) {
+vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule  shaderModule) {
 	VkPipelineShaderStageCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	info.pNext = nullptr;

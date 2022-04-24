@@ -68,7 +68,12 @@ private:
 	VkSemaphore _presentSemaphore,_renderSemaphore;
 	VkFence _renderFence;
 
+	//pipelines
 	VkPipelineLayout _trianglePipelineLayout;
 	VkPipeline _trianglePipeline;
+	VkPipeline _redTrianglePipeline;
+
+
+	int _selectedShader{0};
 
 };

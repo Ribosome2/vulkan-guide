@@ -75,8 +75,9 @@ void VulkanEngine::cleanup() {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
 			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
 		}
-		vkDestroyPipeline(_device,_trianglePipeline, nullptr);
-		vkDestroyPipelineLayout(_device,_trianglePipelineLayout, nullptr);
+		vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+		vkDestroyPipeline(_device, _redTrianglePipeline, nullptr);
+		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
 
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
@@ -103,7 +104,8 @@ void VulkanEngine::draw() {
 	VkCommandBuffer cmd = _mainCommandBuffer;
 
 	//begin the command buffer recording. we will use this command buffer exactly once
-	VkCommandBufferBeginInfo cmdBeginInfo=vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(
+			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 	{
@@ -114,7 +116,8 @@ void VulkanEngine::draw() {
 
 		//start the main renderpass
 		//we will use the clear color from above, and the framebuffer of the index the swapchain gave us
-		VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass,_windowExtent,_framebuffers[swapchainIndex]);
+		VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent,
+																	 _framebuffers[swapchainIndex]);
 
 		//connect clear values
 		rpInfo.clearValueCount = 1;
@@ -122,8 +125,13 @@ void VulkanEngine::draw() {
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		{
 			//once we start adding rendering commands ,they will be  here
-			vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_trianglePipeline);
-			vkCmdDraw(cmd,3,1,0,0);
+			if(_selectedShader==0)
+			{
+				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
+			}else{
+				vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,_redTrianglePipeline);
+			}
+			vkCmdDraw(cmd, 3, 1, 0, 0);
 		}
 		vkCmdEndRenderPass(cmd);
 	}
@@ -153,12 +161,12 @@ void VulkanEngine::draw() {
 	VkPresentInfoKHR presentInfo = vkinit::present_info();
 
 	presentInfo.pSwapchains = &_swapchain;
-	presentInfo.swapchainCount=1;
+	presentInfo.swapchainCount = 1;
 
-	presentInfo.pWaitSemaphores=&_renderSemaphore;
-	presentInfo.waitSemaphoreCount=1;
-	presentInfo.pImageIndices=&swapchainIndex;
-	VK_CHECK(vkQueuePresentKHR(_graphicsQueue,&presentInfo));
+	presentInfo.pWaitSemaphores = &_renderSemaphore;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pImageIndices = &swapchainIndex;
+	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
 	//increase the number of frames drawn
 	_frameNumber++;
@@ -173,7 +181,18 @@ void VulkanEngine::run() {
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0) {
 			//close the window when user alt-f4s or clicks the X button			
-			if (e.type == SDL_QUIT) bQuit = true;
+			if (e.type == SDL_QUIT) {
+				bQuit = true;
+			} else if (e.type == SDL_KEYDOWN) {
+				if (e.key.keysym.sym == SDLK_SPACE) {
+					_selectedShader += 1;
+					if (_selectedShader > 1) {
+						_selectedShader = 0;
+					}
+				}else if(e.key.keysym.sym == SDLK_ESCAPE){
+					bQuit=true;
+				}
+			}
 		}
 
 		draw();
@@ -337,8 +356,7 @@ void VulkanEngine::init_sync_structures() {
 	VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
-{
+bool VulkanEngine::load_shader_module(const char *filePath, VkShaderModule *outShaderModule) {
 	//open the file. With cursor at the end
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -347,7 +365,7 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 	}
 	//find what the size of the file is by looking up the location of the cursor
 	//because the cursor is at the end, it gives the size directly in bytes
-	size_t fileSize = (size_t)file.tellg();
+	size_t fileSize = (size_t) file.tellg();
 
 	//spirv expects the buffer to be on uint32, so make sure to reserve an int vector big enough for the entire file
 	std::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
@@ -356,7 +374,7 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 	file.seekg(0);
 
 	//load the entire file into the buffer
-	file.read((char*)buffer.data(), fileSize);
+	file.read((char *) buffer.data(), fileSize);
 
 	//now that the file is loaded into the buffer, we can close it
 	file.close();
@@ -379,70 +397,88 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 	return true;
 }
 
-static void compileShader(std::string  shaderPath , std::string  outputPath){
+static void compileShader(std::string shaderPath, std::string outputPath) {
 	char command[1024];
-	sprintf_s(command,"glslc.exe %s -o %s",shaderPath.c_str(),outputPath.c_str());
+	sprintf_s(command, "glslc.exe %s -o %s", shaderPath.c_str(), outputPath.c_str());
 	auto result = system(command);
-	if(result!=0)
-	{
-		std::cout<<"compile shader failed "<<shaderPath<<std::endl;
+	if (result != 0) {
+		std::cout << "compile shader failed " << shaderPath << std::endl;
 	}
 }
+
 void VulkanEngine::init_pipelines() {
-	std::string vert_shader_src_path= "../shaders/colored_triangle.vert";
-	std::string frag_shader_src_path= "../shaders/colored_triangle.frag";
+	std::string vert_shader_src_path = "../shaders/colored_triangle.vert";
+	std::string frag_shader_src_path = "../shaders/colored_triangle.frag";
 
-	std::string frag_shader_spv_path= "../spv_files/colored_triangle.frag.spv";
-	std::string vert_shader_spv_path= "../spv_files/colored_triangle.vert.spv";
+	std::string frag_shader_spv_path = "../spv_files/colored_triangle.frag.spv";
+	std::string vert_shader_spv_path = "../spv_files/colored_triangle.vert.spv";
 
-//	compileShader(vert_shader_src_path,vert_shader_spv_path);
-//	compileShader(frag_shader_src_path,frag_shader_spv_path);
+	compileShader(vert_shader_src_path, vert_shader_spv_path);
+	compileShader(frag_shader_src_path, frag_shader_spv_path);
 	VkShaderModule triangleFragShader;
-	if (!load_shader_module(frag_shader_spv_path.c_str(), &triangleFragShader))
-	{
+	if (!load_shader_module(frag_shader_spv_path.c_str(), &triangleFragShader)) {
 		std::cerr << "Error when building the triangle fragment shader module" << std::endl;
-	}
-	else {
+	} else {
 		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module(vert_shader_spv_path.c_str(), &triangleVertexShader))
-	{
+	if (!load_shader_module(vert_shader_spv_path.c_str(), &triangleVertexShader)) {
 		std::cerr << "Error when building the triangle vertex shader module" << std::endl;
+	} else {
+		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
-	else {
+
+	std::string redTriangleVertShaderSrc = "../shaders/triangle.vert";
+	std::string redTriangleFragShaderSrc = "../shaders/triangle.frag";
+
+	std::string redTriangleFragShaderSPV = "../spv_files/triangle.frag.spv";
+	std::string redTriangleVertShaderSPV = "../spv_files/triangle.vert.spv";
+
+	compileShader(redTriangleVertShaderSrc, redTriangleVertShaderSPV);
+	compileShader(redTriangleFragShaderSrc, redTriangleFragShaderSPV);
+	VkShaderModule redTriangleFragShader;
+	if (!load_shader_module(redTriangleFragShaderSPV.c_str(), &redTriangleFragShader)) {
+		std::cerr << "Error when building the triangle fragment shader module" << std::endl;
+	} else {
+		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
+	}
+
+	VkShaderModule redTriangleVertexShader;
+	if (!load_shader_module(redTriangleVertShaderSPV.c_str(), &redTriangleVertexShader)) {
+		std::cerr << "Error when building the triangle vertex shader module" << std::endl;
+	} else {
 		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
 
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other system yet, so no need to use anything other than empty default
-	VkPipelineLayoutCreateInfo pipeline_layout_info=vkinit::pipeline_layout_create_info();
-	VK_CHECK(vkCreatePipelineLayout(_device,&pipeline_layout_info, nullptr,&_trianglePipelineLayout));
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_trianglePipelineLayout));
 
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
 	pipelineBuilder._shaderStages.push_back(
-			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT,triangleVertexShader)
-			);
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader)
+	);
 	pipelineBuilder._shaderStages.push_back(
-			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,triangleFragShader)
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader)
 	);
 	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
-	pipelineBuilder._vertexInputInfo= vkinit::vertex_input_state_create_info();
+	pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
 
 	//input assembly is the configuration for drawing triangle lists,strips,or individual points
 	//we are just going to draw triangle list
-	pipelineBuilder._inputAssembly=vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 	//build viewport and scissor from the swapchain extents
 	pipelineBuilder._viewport.x = 0.0f;
 	pipelineBuilder._viewport.y = 0.0f;
-	pipelineBuilder._viewport.width = (float)_windowExtent.width;
-	pipelineBuilder._viewport.height = (float)_windowExtent.height;
+	pipelineBuilder._viewport.width = (float) _windowExtent.width;
+	pipelineBuilder._viewport.height = (float) _windowExtent.height;
 	pipelineBuilder._viewport.minDepth = 0.0f;
 	pipelineBuilder._viewport.maxDepth = 1.0f;
 
-	pipelineBuilder._scissor.offset = { 0, 0 };
+	pipelineBuilder._scissor.offset = {0, 0};
 	pipelineBuilder._scissor.extent = _windowExtent;
 
 	//configure the rasterizer to draw filled triangles
@@ -459,7 +495,24 @@ void VulkanEngine::init_pipelines() {
 
 	//finally, build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-	vkDestroyShaderModule(_device,triangleFragShader, nullptr);
-	vkDestroyShaderModule(_device,triangleVertexShader, nullptr);
+	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
+	//clear the shader stages for the builder
+	pipelineBuilder._shaderStages.clear();
+	//add the other shaders
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT,redTriangleVertexShader)
+			);
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,redTriangleFragShader)
+			);
+
+	//build the red triangle pipeline
+	_redTrianglePipeline=pipelineBuilder.build_pipeline(_device,_renderPass);
+
+	vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
+
 
 }
