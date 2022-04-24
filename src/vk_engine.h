@@ -7,6 +7,8 @@
 #include <vector>
 #include <deque>
 #include <functional>
+#include <vk_mesh.h>
+
 
 struct DeletionQueue{
 	std::deque<std::function<void()>> deletors;
@@ -56,6 +58,8 @@ private:
 	void init_pipelines();
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	void load_meshes();
+	void upload_mesh(Mesh& mesh);
 
 private:
 	//--- omitted ---
@@ -90,9 +94,13 @@ private:
 	VkPipelineLayout _trianglePipelineLayout;
 	VkPipeline _trianglePipeline;
 	VkPipeline _redTrianglePipeline;
+	VkPipeline _meshPipeline;
 
 
 	int _selectedShader{0};
+
+	VmaAllocator _allocator; //vma lib allocator
+  	Mesh _triangleMesh;
 
 	DeletionQueue _mainDeletionQueue;
 
