@@ -31,6 +31,15 @@ struct MeshPushConstants{
 	glm::mat4 render_matrix;
 };
 
+struct FrameData{
+	VkSemaphore _presentSemaphore;
+	VkSemaphore _renderSemaphore;
+	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+};
+
 struct DeletionQueue{
 	std::deque<std::function<void()>> deletors;
 
@@ -47,6 +56,7 @@ struct DeletionQueue{
 	}
 };
 
+constexpr unsigned int FRAME_OVERLAP=2;
 class VulkanEngine {
 public:
 
@@ -92,6 +102,8 @@ private:
 	Mesh* get_mesh(const std::string& name);
 	void draw_objects(VkCommandBuffer cmd,RenderObjcet * first, int count);
 
+	FrameData & get_current_frame();
+
 private:
 	//--- omitted ---
 	VkInstance _instance;
@@ -110,16 +122,13 @@ private:
 	//for commands
 	VkQueue _graphicsQueue; //queue we will submit to
 	uint32_t _graphicsQueueFamily; //family of that queue
-	VkCommandPool _commandPool;//that command pool for out commands
-	VkCommandBuffer _mainCommandBuffer; //the buffer we will record into
 
 	//for RenderPass
 	VkRenderPass _renderPass;
 	std::vector<VkFramebuffer > _framebuffers;
 
-	//for render loop
-	VkSemaphore _presentSemaphore,_renderSemaphore;
-	VkFence _renderFence;
+	//frame storage
+	FrameData _frames[FRAME_OVERLAP];
 
 	//pipelines
 	VkPipeline _meshPipeline;
