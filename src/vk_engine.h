@@ -122,9 +122,6 @@ private:
 	VkFence _renderFence;
 
 	//pipelines
-	VkPipelineLayout _trianglePipelineLayout;
-	VkPipeline _trianglePipeline;
-	VkPipeline _redTrianglePipeline;
 	VkPipeline _meshPipeline;
 	VkPipelineLayout _meshPipelineLayout;
 
