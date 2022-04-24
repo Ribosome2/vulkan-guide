@@ -56,6 +56,7 @@ void VulkanEngine::init() {
 	init_sync_structures();
 	init_pipelines();
 	load_meshes();
+	init_scene();
 
 	//everything went fine
 	_isInitialized = true;
@@ -107,7 +108,7 @@ void VulkanEngine::draw() {
 
 		//clear depth at 1
 		VkClearValue depthClear;
-		depthClear.depthStencil.depth=1.f;
+		depthClear.depthStencil.depth = 1.f;
 
 		//start the main renderpass
 		//we will use the clear color from above, and the framebuffer of the index the swapchain gave us
@@ -116,38 +117,11 @@ void VulkanEngine::draw() {
 
 		//connect clear values
 		rpInfo.clearValueCount = 2;
-		VkClearValue clearValues[]={clearValue,depthClear};
+		VkClearValue clearValues[] = {clearValue, depthClear};
 		rpInfo.pClearValues = &clearValues[0];
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		{
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-
-			//bind the mesh vertex buffer with offset 0
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer, &offset);
-
-			//make a model view matrix for rendering the object
-			//camera position
-			glm::vec3 camPos = {0.f, 0.f, -2.f};
-
-			glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-			//camera projection
-			glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
-			projection[1][1] *= -1;
-			//model rotation
-			glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
-
-			//calculate final mesh matrix
-			glm::mat4 mesh_matrix = projection * view * model;
-
-			MeshPushConstants constants{};
-			constants.render_matrix = mesh_matrix;
-
-			//upload the matrix to the GPU via push constants
-			vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants),
-							   &constants);
-			//we can now draw the mesh
-			vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
+			draw_objects(cmd,_renderables.data(),_renderables.size());
 		}
 		vkCmdEndRenderPass(cmd);
 	}
@@ -407,14 +381,16 @@ void VulkanEngine::init_default_renderpass() {
 	VkSubpassDependency depth_dependency = {};
 	depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	depth_dependency.dstSubpass = 0;
-	depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.srcStageMask =
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 	depth_dependency.srcAccessMask = 0;
-	depth_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.dstStageMask =
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 	depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	VkSubpassDependency dependencies[2]={dependency,depth_dependency};
-	render_pass_info.dependencyCount=2;
-	render_pass_info.pDependencies=&dependencies[0];
+	VkSubpassDependency dependencies[2] = {dependency, depth_dependency};
+	render_pass_info.dependencyCount = 2;
+	render_pass_info.pDependencies = &dependencies[0];
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 
@@ -444,11 +420,11 @@ void VulkanEngine::init_frameBuffers() {
 	//create framebuffers for each of the swapchain image views
 	for (int i = 0; i < swapchain_image_count; i++) {
 		VkImageView attachments[2];
-		attachments[0]=_swapchainImageViews[i];
-		attachments[1]=_depthImageView;
+		attachments[0] = _swapchainImageViews[i];
+		attachments[1] = _depthImageView;
 
 		fb_info.pAttachments = attachments;
-		fb_info.attachmentCount=2;
+		fb_info.attachmentCount = 2;
 		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
 		_mainDeletionQueue.push_function([=]() {
@@ -606,7 +582,7 @@ void VulkanEngine::init_pipelines() {
 
 	//use the triangle layout we created
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
-	pipelineBuilder._depthStencil=vkinit::depth_stencil_create_info(true, true,VK_COMPARE_OP_LESS_OR_EQUAL);
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	//finally, build the pipeline
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
@@ -673,6 +649,7 @@ void VulkanEngine::init_pipelines() {
 	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
 	_meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
+	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
 
 	vkDestroyShaderModule(_device, redTriangleFragShader, nullptr);
 	vkDestroyShaderModule(_device, redTriangleVertexShader, nullptr);
@@ -709,6 +686,11 @@ void VulkanEngine::load_meshes() {
 	_monkeyMesh.load_from_obj("../assets/monkey_smooth.obj");
 	upload_mesh(_triangleMesh);
 	upload_mesh(_monkeyMesh);
+
+	//note that we are copying them. Eventually we will delete the hard-coded _monkey and triangle mesh
+	_meshes["monkey"] = _monkeyMesh;
+	_meshes["triangle"] = _triangleMesh;
+
 }
 
 void VulkanEngine::upload_mesh(Mesh &mesh) {
@@ -737,4 +719,97 @@ void VulkanEngine::upload_mesh(Mesh &mesh) {
 	vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
 	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
 	vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+}
+
+Material *VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const string &name) {
+	Material mat{};
+	mat.pipeline = pipeline;
+	mat.pipelineLayout = layout;
+	_materials[name] = mat;
+	return nullptr;
+}
+
+Material *VulkanEngine::get_material(const string &name) {
+	auto it = _materials.find(name);
+	if (it == _materials.end()) {
+		return nullptr;
+	} else {
+		return &(*it).second;
+	}
+	return nullptr;
+}
+
+Mesh *VulkanEngine::get_mesh(const string &name) {
+	auto it = _meshes.find(name);
+	if (it == _meshes.end()) {
+		return nullptr;
+	} else {
+		return &(*it).second;
+	}
+
+	return nullptr;
+}
+
+void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObjcet *first, int count) {
+	//make a model view matrix for rendering the object
+	//camera view
+	glm::vec3 camPos ={0.f,-6.f,-10.f};
+	glm::mat4 view =glm::translate(glm::mat4(1.f),camPos);
+	auto aspectRatio = (float )_windowExtent.width / (float )_windowExtent.height;
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), aspectRatio,0.1f,200.f);
+	projection[1][1]*=-1;
+
+	Mesh* lashMesh = nullptr;
+	Material* lastMaterial = nullptr;
+	for(int i=0;i<count;i++){
+		RenderObjcet & objcet= first[i];
+		//only bind the pipeline if it doesn't match with the already bound one
+		if(objcet.material!=lastMaterial){
+			vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,objcet.material->pipeline);
+			lastMaterial= objcet.material;
+		}
+
+		glm::mat4  model = objcet.transformMatrix;
+		//final render matrix, that we are calculating on the cpu
+		glm::mat4 mesh_matrix = projection*view*model;
+
+		MeshPushConstants constants{};
+		constants.render_matrix= mesh_matrix;
+
+		//upload the mesh to th GPU via push constants
+		vkCmdPushConstants(cmd,objcet.material->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof(MeshPushConstants),&constants);
+
+		//only bind the mesh if it's a different one from last bind
+		if(objcet.mesh!=lashMesh){
+			//bind the mesh vertex buffer with offset o
+			VkDeviceSize offset=0;
+			vkCmdBindVertexBuffers(cmd,0,1,&objcet.mesh->_vertexBuffer._buffer,&offset);
+			lashMesh=objcet.mesh;
+		}
+		//we can now draw
+		vkCmdDraw(cmd,objcet.mesh->_vertices.size(),1,0,0);
+	}
+
+}
+
+void VulkanEngine::init_scene() {
+	RenderObjcet monkey{};
+	monkey.mesh = get_mesh("monkey");
+	monkey.material = get_material("defaultmesh");
+	monkey.transformMatrix = glm::mat4{1.0f};
+
+	_renderables.push_back(monkey);
+	for (int x = -20; x <= 20; x++) {
+		for (int y = -20; y < 20; y++) {
+			RenderObjcet tri{};
+			tri.mesh = get_mesh("triangle");
+			tri.material = get_material("defaultmesh");
+			glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, y));
+			glm::mat4 scale = glm::scale(glm::mat4{1.0f}, glm::vec3(0.2, 0.2, 0.2));
+			tri.transformMatrix = translation * scale;
+
+			_renderables.push_back(tri);
+		}
+	}
+
 }
