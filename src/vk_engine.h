@@ -102,6 +102,11 @@ private:
 	VkPipeline _meshPipeline;
 	VkPipelineLayout _meshPipelineLayout;
 
+	//for depth buffer
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+	VkFormat _depthFormat;
+
 
 	int _selectedShader{0};
 
