@@ -37,6 +37,14 @@ struct GPUCameraData{
 	glm::mat4 viewproj;
 };
 
+struct GPUSceneData{
+	glm::vec4 fogColor;		//w is for exponent
+	glm::vec4 fogDistance;	//x for min,y for max, zw unused.
+	glm::vec4 ambientColor;
+	glm::vec4 sunlightDirection; //w for sun power
+	glm::vec4 sunlightColor;
+};
+
 struct FrameData{
 	VkSemaphore _presentSemaphore;
 	VkSemaphore _renderSemaphore;
@@ -114,14 +122,15 @@ private:
 	FrameData & get_current_frame();
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	void init_descriptors();
+	size_t pad_uniform_buffer_size(size_t originalSize);
 
 private:
-	//--- omitted ---
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT  _debug_messenger; //Vulkan debug output handle
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
 	VkSurfaceKHR _surface;
+	VkPhysicalDeviceProperties _gpuProperties;
 
 	//swapchain
 	VkSwapchainKHR  _swapchain;
@@ -140,6 +149,9 @@ private:
 
 	//frame storage
 	FrameData _frames[FRAME_OVERLAP];
+
+	GPUSceneData _sceneParameters;
+	AllocatedBuffer _sceneParameterBuffer;
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorPool _descriptorPool;
