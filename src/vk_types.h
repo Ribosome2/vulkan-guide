@@ -8,7 +8,7 @@
 
 //we will add our main reusable types here
 
-struct AllocateBuffer{
+struct AllocatedBuffer{
 	VkBuffer _buffer;
 	VmaAllocation _allocation;
 };

@@ -31,6 +31,12 @@ struct MeshPushConstants{
 	glm::mat4 render_matrix;
 };
 
+struct GPUCameraData{
+	glm::mat4 view;
+	glm::mat4 proj;
+	glm::mat4 viewproj;
+};
+
 struct FrameData{
 	VkSemaphore _presentSemaphore;
 	VkSemaphore _renderSemaphore;
@@ -38,6 +44,9 @@ struct FrameData{
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+
+	AllocatedBuffer cameraBuffer;
+	VkDescriptorSet globalDescriptor;
 };
 
 struct DeletionQueue{
@@ -103,6 +112,8 @@ private:
 	void draw_objects(VkCommandBuffer cmd,RenderObjcet * first, int count);
 
 	FrameData & get_current_frame();
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	void init_descriptors();
 
 private:
 	//--- omitted ---
@@ -129,6 +140,9 @@ private:
 
 	//frame storage
 	FrameData _frames[FRAME_OVERLAP];
+
+	VkDescriptorSetLayout _globalSetLayout;
+	VkDescriptorPool _descriptorPool;
 
 	//pipelines
 	VkPipeline _meshPipeline;
