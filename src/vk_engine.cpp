@@ -808,10 +808,18 @@ void VulkanEngine::init_scene() {
 	monkey.transformMatrix = glm::mat4{1.0f};
 
 	_renderables.push_back(monkey);
-	for (int x = -20; x <= 20; x++) {
-		for (int y = -20; y < 20; y++) {
+	int gridSize = 40;
+	for (int x = -gridSize; x <= gridSize; x++) {
+		for (int y = -gridSize; y < gridSize; y++) {
 			RenderObject tri{};
-			tri.mesh = get_mesh("triangle");
+
+			if(x %3==0)
+			{
+				tri.mesh = get_mesh("monkey");
+			}else
+			{
+				tri.mesh = get_mesh("triangle");
+			}
 			tri.material = get_material("defaultmesh");
 			glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, y));
 			glm::mat4 scale = glm::scale(glm::mat4{1.0f}, glm::vec3(0.2, 0.2, 0.2));
