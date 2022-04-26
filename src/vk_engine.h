@@ -19,7 +19,7 @@ struct Material{
 	VkPipelineLayout pipelineLayout;
 };
 
-struct RenderObjcet{
+struct RenderObject{
 	Mesh * mesh ;
 	Material* material;
 	glm::mat4 transformMatrix;
@@ -55,6 +55,13 @@ struct FrameData{
 
 	AllocatedBuffer cameraBuffer;
 	VkDescriptorSet globalDescriptor;
+
+	AllocatedBuffer objectBuffer;
+	VkDescriptorSet objectDescriptor;
+};
+
+struct GPUObjectData{
+	glm::mat4 modelMatrix;
 };
 
 struct DeletionQueue{
@@ -117,7 +124,7 @@ private:
 	//returns nullptr if it can't be found
 	Material* get_material(const std::string & name);
 	Mesh* get_mesh(const std::string& name);
-	void draw_objects(VkCommandBuffer cmd,RenderObjcet * first, int count);
+	void draw_objects(VkCommandBuffer cmd, RenderObject * first, int count);
 
 	FrameData & get_current_frame();
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
@@ -154,6 +161,7 @@ private:
 	AllocatedBuffer _sceneParameterBuffer;
 
 	VkDescriptorSetLayout _globalSetLayout;
+	VkDescriptorSetLayout _objectSetLayout;
 	VkDescriptorPool _descriptorPool;
 
 	//pipelines
@@ -172,7 +180,7 @@ private:
   	Mesh _triangleMesh;
   	Mesh _monkeyMesh;
 	//default array of renderable objects
-	std::vector<RenderObjcet> _renderables;
+	std::vector<RenderObject> _renderables;
 	std::unordered_map<std::string ,Material> _materials;
 	std::unordered_map<std::string ,Mesh> _meshes;
 
