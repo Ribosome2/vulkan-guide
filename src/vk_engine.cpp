@@ -186,7 +186,7 @@ void VulkanEngine::run() {
 				}
 			}
 		}
-
+		_sceneCamera.handleInput();
 		draw();
 	}
 }
@@ -724,8 +724,7 @@ Mesh *VulkanEngine::get_mesh(const string &name) {
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first, int count) {
 	//make a model view matrix for rendering the object
 	//camera view
-	glm::vec3 camPos = {0.f, -6.f, -10.f};
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+	glm::mat4 view = glm::translate(glm::mat4(1.f), _sceneCamera.camPos);
 	auto aspectRatio = (float) _windowExtent.width / (float) _windowExtent.height;
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), aspectRatio, 0.1f, 200.f);
 	projection[1][1] *= -1;

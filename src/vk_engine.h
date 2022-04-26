@@ -10,6 +10,7 @@
 #include <vk_mesh.h>
 #include <glm/glm.hpp>
 #include <unordered_map>
+#include "camera.h"
 
 
 struct Material{
@@ -185,5 +186,7 @@ private:
 	std::unordered_map<std::string ,Mesh> _meshes;
 
 	DeletionQueue _mainDeletionQueue;
+
+	Camera _sceneCamera;
 
 };
