@@ -12,6 +12,11 @@
 #include <unordered_map>
 #include "camera.h"
 
+struct Texture{
+	AllocatedImage image;
+	VkImageView imageView;
+};
+
 
 struct UploadContext{
 	VkFence _uploadFence;
@@ -112,6 +117,9 @@ public:
 	//run main loop
 	void run();
 
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 private:
 	void init_vulkan();
 	void init_swapchain();
@@ -134,10 +142,16 @@ private:
 	void draw_objects(VkCommandBuffer cmd, RenderObject * first, int count);
 
 	FrameData & get_current_frame();
-	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
 	void init_descriptors();
 	size_t pad_uniform_buffer_size(size_t originalSize);
-	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+	void load_images();
+
+public:
+	VmaAllocator _allocator; //vma lib allocator
+	DeletionQueue _mainDeletionQueue;
+	std::unordered_map<std::string ,Texture> _loadedTextures;
+
 private:
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT  _debug_messenger; //Vulkan debug output handle
@@ -184,7 +198,7 @@ private:
 
 	int _selectedShader{0};
 
-	VmaAllocator _allocator; //vma lib allocator
+
   	Mesh _triangleMesh;
   	Mesh _monkeyMesh;
 	//default array of renderable objects
@@ -192,7 +206,6 @@ private:
 	std::unordered_map<std::string ,Material> _materials;
 	std::unordered_map<std::string ,Mesh> _meshes;
 
-	DeletionQueue _mainDeletionQueue;
 
 	Camera _sceneCamera;
 

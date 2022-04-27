@@ -17,6 +17,7 @@
 
 #include "vk_mem_alloc.h"
 #include "PipelineBuilder.h"
+#include "vk_textures.h"
 #include <glm/gtx/transform.hpp>
 
 //we want to abort when there is an error,
@@ -56,6 +57,7 @@ void VulkanEngine::init() {
 	init_sync_structures();
 	init_descriptors();
 	init_pipelines();
+	load_images();
 	load_meshes();
 	init_scene();
 
@@ -686,7 +688,7 @@ void VulkanEngine::load_meshes() {
 
 void VulkanEngine::upload_mesh(Mesh &mesh) {
 
-	const size_t bufferSize= mesh._vertices.size() * sizeof(Vertex);
+	const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
 	//allocate staging buffer
 	VkBufferCreateInfo stagingBufferInfo = {};
 	stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -707,7 +709,7 @@ void VulkanEngine::upload_mesh(Mesh &mesh) {
 							 &stagingBuffer._allocation,
 							 nullptr));
 
-	void* data;
+	void *data;
 	vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
 	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
 	vmaUnmapMemory(_allocator, stagingBuffer._allocation);
@@ -1072,4 +1074,18 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer)> &&funct
 
 	//reset the command buffers inside the command pool
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
+}
+
+void VulkanEngine::load_images() {
+	Texture lostEmpire;
+	vkutil::load_image_from_file(*this, "../assets/lost_empire-RGBA.png", lostEmpire.image);
+	VkImageViewCreateInfo imageInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image,
+																	VK_IMAGE_ASPECT_COLOR_BIT);
+	vkCreateImageView(_device, &imageInfo, nullptr, &lostEmpire.imageView);
+
+	_loadedTextures["empire_diffuse"] = lostEmpire;
+
+	_mainDeletionQueue.push_function([=](){
+		vkDestroyImageView(_device,lostEmpire.imageView, nullptr);
+	});
 }
