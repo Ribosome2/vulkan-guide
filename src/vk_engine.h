@@ -13,6 +13,12 @@
 #include "camera.h"
 
 
+struct UploadContext{
+	VkFence _uploadFence;
+	VkCommandPool _commandPool;
+	VkCommandBuffer _commandBuffer;
+};
+
 struct Material{
 	VkPipeline  pipeline;
 	//note that we store the VKPipeline and layout by value ,not pointer
@@ -131,7 +137,7 @@ private:
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 	void init_descriptors();
 	size_t pad_uniform_buffer_size(size_t originalSize);
-
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 private:
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT  _debug_messenger; //Vulkan debug output handle
@@ -174,6 +180,7 @@ private:
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
 
+	UploadContext _uploadContext;
 
 	int _selectedShader{0};
 

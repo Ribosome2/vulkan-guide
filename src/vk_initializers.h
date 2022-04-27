@@ -30,7 +30,7 @@ namespace vkinit {
 
 	VkSubmitInfo submit_info(VkCommandBuffer *cmd);
 
-	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
+	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags=0);
 	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
 	VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
 
