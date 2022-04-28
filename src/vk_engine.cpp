@@ -612,6 +612,11 @@ void VulkanEngine::init_pipelines() {
 		std::cout << "Error when building the colored mesh frag shader module" << std::endl;
 	}
 
+	VkShaderModule texturedMeshShader;
+	if (!load_shader_module("../spv_files/textured_lit.frag.spv", &texturedMeshShader)) {
+		std::cout << "Error when building the textured mesh frag shader module" << std::endl;
+	}
+
 	//add the other shaders
 	pipelineBuilder._shaderStages.push_back(
 			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
@@ -643,19 +648,41 @@ void VulkanEngine::init_pipelines() {
 
 
 	//build the mesh triangle pipeline
-	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
-	_meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
-	create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
+	create_material(meshPipeline, texturedPipeLayout, "defaultmesh");
+
+
+	//create pipeline for textured drawing
+	pipelineBuilder._shaderStages.clear();
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedMeshShader));
+
+	VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+	create_material(texPipeline, texturedPipeLayout, "texturedmesh");
+
+
+	//create pipeline for textured drawing
+	pipelineBuilder._shaderStages.clear();
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+
+	pipelineBuilder._shaderStages.push_back(
+			vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedMeshShader));
+
+
 
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
 	vkDestroyShaderModule(_device, coloredMeshShader, nullptr);
 	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+	vkDestroyShaderModule(_device, texturedMeshShader, nullptr);
 
 	_mainDeletionQueue.push_function([=]() {
 		//destroy the 2 pipelines we have created
-		vkDestroyPipeline(_device, _meshPipeline, nullptr);
 		//destroy the pipeline layout that they use
 		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
 	});

@@ -186,8 +186,8 @@ private:
 	VkDescriptorPool _descriptorPool;
 
 	//pipelines
-	VkPipeline _meshPipeline;
 	VkPipelineLayout _meshPipelineLayout;
+	VkPipelineLayout texturedPipeLayout;
 
 	//for depth buffer
 	VkImageView _depthImageView;
