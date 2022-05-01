@@ -25,6 +25,7 @@ struct UploadContext{
 };
 
 struct Material{
+	VkDescriptorSet  textureSet{VK_NULL_HANDLE}; //texture defaulted to null
 	VkPipeline  pipeline;
 	//note that we store the VKPipeline and layout by value ,not pointer
 	//They are 64 bit handles to internal driver structures anyway so storing pointers to them isn't very helpful
@@ -183,11 +184,12 @@ private:
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;
+	VkDescriptorSetLayout _singleTextureSetLayout;
 	VkDescriptorPool _descriptorPool;
 
 	//pipelines
 	VkPipelineLayout _meshPipelineLayout;
-	VkPipelineLayout texturedPipeLayout;
+//	VkPipelineLayout texturedPipeLayout;
 
 	//for depth buffer
 	VkImageView _depthImageView;
