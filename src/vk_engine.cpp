@@ -650,7 +650,6 @@ void VulkanEngine::init_pipelines() {
 	//build the mesh triangle pipeline
 	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
-	create_material(meshPipeline, texturedPipeLayout, "defaultmesh");
 
 
 	//create pipeline for textured drawing
