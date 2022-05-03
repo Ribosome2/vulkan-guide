@@ -647,8 +647,6 @@ void VulkanEngine::init_pipelines() {
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
 
 
-	//build the mesh triangle pipeline
-	VkPipeline meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
 
 
@@ -907,12 +905,12 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first, int co
 }
 
 void VulkanEngine::init_scene() {
-	RenderObject monkey{};
-	monkey.mesh = get_mesh("monkey");
-	monkey.material = get_material("defaultmesh");
-	monkey.transformMatrix = glm::mat4{1.0f};
-
-	_renderables.push_back(monkey);
+//	RenderObject monkey{};
+//	monkey.mesh = get_mesh("monkey");
+//	monkey.material = get_material("defaultmesh");
+//	monkey.transformMatrix = glm::mat4{1.0f};
+//
+//	_renderables.push_back(monkey);
 
     //create a sampler for the texture
     VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
@@ -945,24 +943,24 @@ void VulkanEngine::init_scene() {
     vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
 
 
-	int gridSize = 40;
-	for (int x = -gridSize; x <= gridSize; x++) {
-		for (int y = -gridSize; y < gridSize; y++) {
-			RenderObject tri{};
-
-			if (x % 3 == 0) {
-				tri.mesh = get_mesh("monkey");
-			} else {
-				tri.mesh = get_mesh("triangle");
-			}
-			tri.material = get_material("defaultmesh");
-			glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, y));
-			glm::mat4 scale = glm::scale(glm::mat4{1.0f}, glm::vec3(0.2, 0.2, 0.2));
-			tri.transformMatrix = translation * scale;
-
-			_renderables.push_back(tri);
-		}
-	}
+//	int gridSize = 40;
+//	for (int x = -gridSize; x <= gridSize; x++) {
+//		for (int y = -gridSize; y < gridSize; y++) {
+//			RenderObject tri{};
+//
+//			if (x % 3 == 0) {
+//				tri.mesh = get_mesh("monkey");
+//			} else {
+//				tri.mesh = get_mesh("triangle");
+//			}
+//			tri.material = get_material("defaultmesh");
+//			glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, y));
+//			glm::mat4 scale = glm::scale(glm::mat4{1.0f}, glm::vec3(0.2, 0.2, 0.2));
+//			tri.transformMatrix = translation * scale;
+//
+//			_renderables.push_back(tri);
+//		}
+//	}
 
     RenderObject map{};
     map.mesh = get_mesh("empire");
