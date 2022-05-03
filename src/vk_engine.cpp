@@ -218,6 +218,7 @@ void VulkanEngine::init_vulkan() {
 	vkb::PhysicalDevice physicalDevice = deviceSelector
 			.set_minimum_version(1, 1)
 			.set_surface(_surface)
+            .select_first_device_unconditionally()
 			.select()
 			.value();
 
