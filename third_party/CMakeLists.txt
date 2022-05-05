@@ -90,7 +90,10 @@ target_sources(tinyobjloader PRIVATE
 
 target_include_directories(tinyobjloader PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader" )
 
-set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
+#set(sdl2_DIR "SDL_PATH" CACHE FILEPATH "Path to SDL2")
+set(sdl2_DIR $ENV{SDL_PATH})
+MESSAGE(STATUS  "Using SDL_PATH from environment path:")
+MESSAGE(STATUS  $ENV{SDL_PATH})
 add_library(sdl2 INTERFACE)
 target_include_directories(sdl2 INTERFACE "${sdl2_DIR}/include" "${sdl2_image_DIR}/include" )
 target_link_directories(sdl2 INTERFACE "${sdl2_DIR}/lib/x64" "${sdl2_image_DIR}/lib/x64")

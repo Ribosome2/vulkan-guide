@@ -3,3 +3,6 @@
 /third_party/nvlibs
 /third_party/nvidia-texture-tools/data
 /assets_export
+cmake-build-debug
+.idea
+spv_files
