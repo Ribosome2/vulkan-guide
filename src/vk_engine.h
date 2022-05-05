@@ -147,7 +147,7 @@ private:
 	void init_descriptors();
 	size_t pad_uniform_buffer_size(size_t originalSize);
 	void load_images();
-
+	void init_imgui();
 public:
 	VmaAllocator _allocator; //vma lib allocator
 	DeletionQueue _mainDeletionQueue;

@@ -19,6 +19,9 @@
 #include "PipelineBuilder.h"
 #include "vk_textures.h"
 #include <glm/gtx/transform.hpp>
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_vulkan.h"
 
 //we want to abort when there is an error,
 using namespace std;
@@ -57,6 +60,8 @@ void VulkanEngine::init() {
 	init_sync_structures();
 	init_descriptors();
 	init_pipelines();
+	init_imgui();
+
 	load_images();
 	load_meshes();
 	init_scene();
@@ -83,6 +88,7 @@ void VulkanEngine::cleanup() {
 }
 
 void VulkanEngine::draw() {
+
 	//wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	const uint64_t timeout1Second = 1000000000;
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, timeout1Second));
@@ -103,6 +109,7 @@ void VulkanEngine::draw() {
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(
 			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+	ImGui::Render();
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 	{
 		//make a clear-color from frame number, This will flash with 1 120*pi frame period
@@ -125,10 +132,13 @@ void VulkanEngine::draw() {
 		rpInfo.pClearValues = &clearValues[0];
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		{
+
 			draw_objects(cmd, _renderables.data(), (int) _renderables.size());
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 		}
 		vkCmdEndRenderPass(cmd);
 	}
+
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
 	//prepare the submission to the queue
@@ -174,6 +184,7 @@ void VulkanEngine::run() {
 	while (!bQuit) {
 		//Handle events on queue
 		while (SDL_PollEvent(&e) != 0) {
+			ImGui_ImplSDL2_ProcessEvent(&e);
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) {
 				bQuit = true;
@@ -188,6 +199,17 @@ void VulkanEngine::run() {
 				}
 			}
 		}
+
+		//imgui new frame
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL2_NewFrame(_window);
+
+		ImGui::NewFrame();
+
+
+		//imgui commands
+		ImGui::ShowDemoWindow();
+
 		_sceneCamera.handleInput();
 		draw();
 	}
@@ -1189,5 +1211,71 @@ void VulkanEngine::load_images() {
 
 	_mainDeletionQueue.push_function([=](){
 		vkDestroyImageView(_device,lostEmpire.imageView, nullptr);
+	});
+}
+
+void VulkanEngine::init_imgui() {
+	//1: create descriptor pool for IMGUI
+	// the size of the pool is very oversize, but it's copied from imgui demo itself.
+	VkDescriptorPoolSize pool_sizes[] =
+			{
+					{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+					{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+			};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = 1000;
+	pool_info.poolSizeCount = std::size(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	VkDescriptorPool imguiPool;
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &imguiPool));
+
+
+	// 2: initialize imgui library
+
+	//this initializes the core structures of imgui
+	ImGui::CreateContext();
+
+	//this initializes imgui for SDL
+	ImGui_ImplSDL2_InitForVulkan(_window);
+
+	//this initializes imgui for Vulkan
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = _instance;
+	init_info.PhysicalDevice = _chosenGPU;
+	init_info.Device = _device;
+	init_info.Queue = _graphicsQueue;
+	init_info.DescriptorPool = imguiPool;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+	ImGui_ImplVulkan_Init(&init_info, _renderPass);
+
+	//execute a gpu command to upload imgui font textures
+	immediate_submit([&](VkCommandBuffer cmd) {
+		ImGui_ImplVulkan_CreateFontsTexture(cmd);
+	});
+
+	//clear font textures from cpu data
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+	//add the destroy the imgui created structures
+	_mainDeletionQueue.push_function([=]() {
+
+		vkDestroyDescriptorPool(_device, imguiPool, nullptr);
+		ImGui_ImplVulkan_Shutdown();
 	});
 }
