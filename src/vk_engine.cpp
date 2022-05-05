@@ -941,6 +941,9 @@ void VulkanEngine::init_scene() {
     VkSampler blockySampler;
     vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
 
+	_mainDeletionQueue.push_function([=](){
+		vkDestroySampler(_device,blockySampler, nullptr);
+	});
 
 
     Material* texturedMat=	get_material("texturedmesh");
@@ -1161,6 +1164,7 @@ void VulkanEngine::init_descriptors() {
 		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
 		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
 		vkDestroyDescriptorSetLayout(_device, _objectSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_device, _singleTextureSetLayout, nullptr);
 	});
 
 
