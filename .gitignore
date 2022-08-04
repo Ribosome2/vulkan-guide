@@ -6,3 +6,5 @@
 cmake-build-debug
 .idea
 spv_files
+node_modules
+shaders/**.spv
